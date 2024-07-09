@@ -1,5 +1,6 @@
 from sentence_transformers import SentenceTransformer, util
 from PIL import Image
+import streamlit as st
 
 def main():
   #Load CLIP model
