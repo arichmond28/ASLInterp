@@ -5,7 +5,7 @@ import cv2 as cv
 import os
 
 def main():
-    image_path = 'house1.jpeg'
+    image_path = 'house1.jpg'
     
     # Verify if the file exists
     if not os.path.exists(image_path):
@@ -17,18 +17,39 @@ def main():
         print(f"Error: Failed to load the image '{image_path}'.")
         return
 
-    ret, thresh = cv.threshold(img, 9, 10, cv.THRESH_BINARY)
-    contours, hierarchy = cv.findContours(thresh, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
+    # Apply Gaussian blur to reduce noise
+    blurred_img = cv.GaussianBlur(img, (5, 5), 0)
+
+    # Use Canny edge detection for better edge detection
+    edges = cv.Canny(blurred_img, 50, 150)
+
+    # Find contours
+    contours, hierarchy = cv.findContours(edges, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)
 
     mask = np.zeros_like(img)
     
     for cnt in contours:
         cv.drawContours(mask, [cnt], -1, 255, thickness=-1)
     
-    mask_inv = 255 - mask
-    final_im = mask_inv * img
+    # Apply bitwise operations correctly
+    isolated = cv.bitwise_and(img, img, mask=mask)
+    mask_inv = cv.bitwise_not(mask)
+    final_im = cv.bitwise_and(img, img, mask=mask_inv)
     final_im[final_im > 140] = 0
+
+    # Save the processed image
     cv.imwrite('house1hands.jpg', final_im)
+
+    # Draw contours on the original color image
+    color_img = cv.imread(image_path)
+    if color_img is None:
+        print(f"Error: Failed to load the color image '{image_path}'.")
+        return
+    
+    cv.drawContours(color_img, contours, -1, (0, 255, 0), 2)  # Green contours with thickness 2
+
+    # Save the image with contours
+    cv.imwrite('house1_with_contours.jpg', color_img)
 
     # Load CLIP model
     model = SentenceTransformer('clip-ViT-L-14')
@@ -49,3 +70,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
